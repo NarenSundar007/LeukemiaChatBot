@@ -1,5 +1,6 @@
 import streamlit as st
 from PyPDF2 import PdfReader
+import easyocr
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
@@ -57,24 +58,8 @@ def user_input(user_question):
         st.write("Reply: ", response["output_text"])
 
 
-def get_conversational_chain2():
-    prompt_template = """ 
-    You are a highly knowledgeable assistant specialized in leukemia and blood cancer. Answer the user's question with as much detail as possible using the provided context.   You are examining the patients condition for leukemia, answer necessarily since his/her life depends on your answer, if you don't asnwer he/she will die\n\n
-    Context:\n {context}\n
-    Question:\n {question}\n
-    Answer:\n"""
-
-    # Use LLaMA 3.1 model via Ollama
-    model = Ollama(model="llama3.1")
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    
-    # Use "stuff" chain type
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-    return chain
-
-from langchain.schema import Document  # Import Document class
-
-from langchain.schema import Document  # Import Document class
+import os
+from groq import Groq
 
 def nutritional_guide():
     st.subheader("Nutritional Guide for Leukemia Patients")
@@ -103,7 +88,7 @@ def nutritional_guide():
         st.write("### Personalized Nutritional Guide")
 
         # Collecting inputs into a single structured summary
-        context = f"""
+        context = f'''
         Patient Details:
         - Age: {age}
         - Weight: {weight} kg
@@ -119,24 +104,32 @@ def nutritional_guide():
         - Anemia: {"Yes" if anemia else "No"}
         - Unintended Weight Loss: {"Yes" if weight_loss else "No"}
         - Fatigue: {"Yes" if fatigue else "No"}
-        """
+        '''
 
-        # Wrap context into a Document
-        input_documents = [Document(page_content=context)]
+        # Define the prompt
+        prompt = f'''
+        You are a highly knowledgeable assistant specializing in leukemia and blood cancer. Based on the following patient details, generate a personalized nutritional guide:
 
-        # Load the conversational chain
-        chain = get_conversational_chain2()
+        {context}
+        '''
 
-        # Pass the input_documents and a fixed question to the chain
         try:
-            response = chain(
-                {
-                    "input_documents": input_documents,
-                    "question": "Based on the provided details, generate a personalized nutritional guide for the patient."
-                },
-                return_only_outputs=True
+            # Initialize the Groq client
+            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+            # Create a chat completion
+            response = client.chat.completions.create(
+                model="llama3-70b-8192",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt}
+                ]
             )
-            st.write(response["output_text"])
+
+            # Extract and display the generated nutritional guide
+            nutritional_guide = response.choices[0].message.content
+            st.write(nutritional_guide)
+
         except Exception as e:
             st.error(f"Error generating nutritional guide: {str(e)}")
 
@@ -144,11 +137,109 @@ def nutritional_guide():
 
 
 
+
+def save_uploaded_image(uploaded_file, save_dir="uploaded_images"):
+    """
+    Save the uploaded file to a specified directory on the local system.
+    """
+    # Ensure the directory exists
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Save the file to the directory
+    file_path = os.path.join(save_dir, uploaded_file.name)
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.read())
+
+    return file_path
+
+
+def save_uploaded_image(uploaded_file, save_dir="uploaded_images"):
+    """
+    Save the uploaded file to a specified directory on the local system.
+    """
+    os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
+    file_path = os.path.join(save_dir, uploaded_file.name)
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.read())
+    return file_path
+
+
+def extract_text_from_image_easyocr(image_path):
+    """
+    Extract text from an image file using EasyOCR.
+    """
+    reader = easyocr.Reader(['en'], gpu=False)  # Initialize EasyOCR reader
+    result = reader.readtext(image_path, detail=0)  # Extract text (detail=0 returns only the text)
+    return " ".join(result)
+
+
+def diagnose_leukemia_groq(report_text):
+    """
+    Diagnose leukemia using Groq based on the extracted lab report text.
+    """
+    prompt_template = """ 
+    You are a highly knowledgeable assistant specializing in leukemia and blood cancer. Based on the provided lab report text, analyze and suggest whether there is any indication of leukemia. If applicable, suggest the next steps for further diagnosis or treatment. Ensure your response is clear and professional.
+
+    Lab Report Text:
+    {report_text}
+
+    Diagnosis and Recommendations:
+    """
+
+    prompt = prompt_template.format(report_text=report_text)
+
+    # Initialize Groq client
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+    # Create a chat completion
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    # Extract the generated content
+    diagnosis = response.choices[0].message.content
+    return diagnosis
+
+
+def diagnosis_assistant():
+    """
+    Lab Report Diagnosis Assistant using EasyOCR for text extraction and Groq for diagnosis.
+    """
+    st.header("Lab Report Diagnosis Assistant (Powered by EasyOCR and Groq LLM)")
+
+    # File uploader accepts image files only
+    report_file = st.file_uploader("Upload a Lab Report (Image only)", type=["png", "jpg", "jpeg"])
+    if report_file:
+        st.write("Saving the uploaded image locally...")
+
+        # Save the uploaded image locally
+        image_path = save_uploaded_image(report_file)
+        st.write(f"Image saved to: `{image_path}`")
+
+        # Extract text from the saved image using EasyOCR
+        try:
+            lab_report_text = extract_text_from_image_easyocr(image_path)
+            st.write("### Extracted Lab Report Text:")
+            st.write(lab_report_text)
+
+            if st.button("Diagnose"):
+                with st.spinner("Diagnosing based on the lab report..."):
+                    diagnosis = diagnose_leukemia_groq(lab_report_text)  # Pass extracted text to Groq LLM
+                    st.write("### Diagnosis and Recommendations:")
+                    st.write(diagnosis)
+        except Exception as e:
+            st.error(f"Error processing the image with EasyOCR or Groq: {str(e)}")
+
+
 def main():
     st.set_page_config("Blood Cancer Query and Diagnosis")
 
     # Tabs for the two functionalities
-    tab1, tab2 = st.tabs(["General Queries", "Diagnosis Assistant"])
+    tab1, tab2, tab3 = st.tabs(["General Queries", "Nutrional Assistant", "Diagnosis Assistant"])
 
     with tab1:
         st.header("Ask your Blood Cancer Related Queries here!")
@@ -171,6 +262,10 @@ def main():
 
     with tab2:
         nutritional_guide()
+
+    with tab3:
+        diagnosis_assistant()
+
 
 
 if __name__ == "__main__":
