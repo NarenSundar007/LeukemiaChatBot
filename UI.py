@@ -1,13 +1,18 @@
 import streamlit as st
-from PyPDF2 import PdfReader
 import easyocr
+import os
+import google.generativeai as genai
+from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from langchain_community.llms import Ollama
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from groq import Groq
 
+os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -58,8 +63,6 @@ def user_input(user_question):
         st.write("Reply: ", response["output_text"])
 
 
-import os
-from groq import Groq
 
 def nutritional_guide():
     st.subheader("Nutritional Guide for Leukemia Patients")
