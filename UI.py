@@ -13,6 +13,7 @@ from groq import Groq
 
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -30,7 +31,7 @@ def get_text_chunks(text):
 
 
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(google_api_key="AIzaSyDFRi2vqIvtoldhV5oCigCAkspWoKWWQrg", model="models/embedding-001")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
@@ -51,7 +52,7 @@ def get_conversational_chain():
 
 
 def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(google_api_key="AIzaSyDFRi2vqIvtoldhV5oCigCAkspWoKWWQrg", model="models/embedding-001")
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(user_question)
     print(docs)
