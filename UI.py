@@ -211,9 +211,9 @@ def diagnose_leukemia_groq(report_text):
 
 def diagnosis_assistant():
     """
-    Lab Report Diagnosis Assistant using EasyOCR for text extraction and Groq for diagnosis.
+    Lab Report Diagnosis Assistant using EasyOCR for text extraction and LLAMA for diagnosis.
     """
-    st.header("Lab Report Diagnosis Assistant (Powered by EasyOCR and Groq LLM)")
+    st.header("Lab Report Diagnosis Assistant (Powered by EasyOCR and LLM)")
 
     # File uploader accepts image files only
     report_file = st.file_uploader("Upload a Lab Report (Image only)", type=["png", "jpg", "jpeg"])
