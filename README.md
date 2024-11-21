@@ -9,10 +9,6 @@ An AI-powered Streamlit application designed to assist patients and healthcare p
 2. [Technology Stack](#technology-stack)
 3. [Installation](#installation)
 4. [Usage](#usage)
-5. [Screenshots](#screenshots)
-6. [Future Enhancements](#future-enhancements)
-7. [Contributing](#contributing)
-8. [License](#license)
 
 ---
 
