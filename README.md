@@ -55,8 +55,4 @@ An AI-powered Streamlit application designed to assist patients and healthcare p
 - Google Generative AI (`pip install google-generativeai langchain-google-genai`)
 - Groq SDK (`pip install groq`)
 
-### **Steps**
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/blood-cancer-assistant.git
-   cd blood-cancer-assistant
+
